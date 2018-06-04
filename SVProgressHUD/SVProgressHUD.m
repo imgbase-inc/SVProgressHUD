@@ -140,6 +140,11 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
     [self setDefaultStyle:SVProgressHUDStyleCustom];
 }
 
++ (void)setTextColor:(nonnull UIColor*)color {
+    [self sharedView].textColor = color;
+    [self setDefaultStyle:SVProgressHUDStyleCustom];
+}
+
 + (void)setBackgroundLayerColor:(UIColor*)color {
     [self sharedView].backgroundLayerColor = color;
 }
@@ -1171,6 +1176,16 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
     }
 }
 
+- (UIColor*)textColorForStyle {
+    if(self.defaultStyle == SVProgressHUDStyleLight) {
+        return [UIColor blackColor];
+    } else if(self.defaultStyle == SVProgressHUDStyleDark) {
+        return [UIColor whiteColor];
+    } else {
+        return self.textColor;
+    }
+}
+
 - (UIColor*)backgroundColorForStyle {
     if(self.defaultStyle == SVProgressHUDStyleLight) {
         return [UIColor whiteColor];
@@ -1278,7 +1293,7 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
     }
     
     // Update styling
-    _statusLabel.textColor = self.foregroundColorForStyle;
+    _statusLabel.textColor = self.textColorForStyle;
     _statusLabel.font = self.font;
 
     return _statusLabel;
@@ -1460,6 +1475,10 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
 
 - (void)setBackgroundColor:(UIColor*)color {
     if (!_isInitializing) _backgroundColor = color;
+}
+
+- (void)setTextColor:(UIColor*)color {
+    if (!_isInitializing) _textColor = color;
 }
 
 - (void)setBackgroundLayerColor:(UIColor*)color {
