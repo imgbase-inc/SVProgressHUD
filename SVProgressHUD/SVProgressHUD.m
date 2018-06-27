@@ -749,34 +749,34 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
 
 - (void)showProgress:(float)progress status:(NSString*)status {
     __weak SVProgressHUD *weakSelf = self;
-    [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+    dispatch_async(dispatch_get_main_queue(), ^{
         __strong SVProgressHUD *strongSelf = weakSelf;
         if(strongSelf){
             if(strongSelf.fadeOutTimer) {
                 strongSelf.activityCount = 0;
             }
-            
+
             // Stop timer
             strongSelf.fadeOutTimer = nil;
             strongSelf.graceTimer = nil;
-            
+
             // Update / Check view hierarchy to ensure the HUD is visible
             [strongSelf updateViewHierarchy];
-            
+
             // Reset imageView and fadeout timer if an image is currently displayed
             strongSelf.imageView.hidden = YES;
             strongSelf.imageView.image = nil;
-            
+
             // Update text and set progress to the given value
             strongSelf.statusLabel.hidden = status.length == 0;
             strongSelf.statusLabel.text = status;
             strongSelf.progress = progress;
-            
+
             // Choose the "right" indicator depending on the progress
             if(progress >= 0) {
                 // Cancel the indefiniteAnimatedView, then show the ringLayer
                 [strongSelf cancelIndefiniteAnimatedViewAnimation];
-                
+
                 // Add ring to HUD
                 if(!strongSelf.ringView.superview){
                     [strongSelf.hudView.contentView addSubview:strongSelf.ringView];
@@ -784,13 +784,13 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
                 if(!strongSelf.backgroundRingView.superview){
                     [strongSelf.hudView.contentView addSubview:strongSelf.backgroundRingView];
                 }
-                
+
                 // Set progress animated
                 [CATransaction begin];
                 [CATransaction setDisableActions:YES];
                 strongSelf.ringView.strokeEnd = progress;
                 [CATransaction commit];
-                
+
                 // Update the activity count
                 if(progress == 0) {
                     strongSelf.activityCount++;
@@ -798,17 +798,17 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
             } else {
                 // Cancel the ringLayer animation, then show the indefiniteAnimatedView
                 [strongSelf cancelRingLayerAnimation];
-                
+
                 // Add indefiniteAnimatedView to HUD
                 [strongSelf.hudView.contentView addSubview:strongSelf.indefiniteAnimatedView];
                 if([strongSelf.indefiniteAnimatedView respondsToSelector:@selector(startAnimating)]) {
                     [(id)strongSelf.indefiniteAnimatedView startAnimating];
                 }
-                
+
                 // Update the activity count
                 strongSelf.activityCount++;
             }
-            
+
             // Fade in delayed if a grace time is set
             if (self.graceTimeInterval > 0.0 && self.backgroundView.alpha == 0.0f) {
                 strongSelf.graceTimer = [NSTimer timerWithTimeInterval:self.graceTimeInterval target:strongSelf selector:@selector(fadeIn:) userInfo:nil repeats:NO];
@@ -816,7 +816,7 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
             } else {
                 [strongSelf fadeIn:nil];
             }
-            
+
             // Tell the Haptics Generator to prepare for feedback, which may come soon
 #if TARGET_OS_IOS && __IPHONE_OS_VERSION_MAX_ALLOWED >= 100000
             if (@available(iOS 10.0, *)) {
@@ -824,26 +824,26 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
             }
 #endif
         }
-    }];
+    });
 }
 
 - (void)showImage:(UIImage*)image status:(NSString*)status duration:(NSTimeInterval)duration {
     __weak SVProgressHUD *weakSelf = self;
-    [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+    dispatch_async(dispatch_get_main_queue(), ^{
         __strong SVProgressHUD *strongSelf = weakSelf;
         if(strongSelf){
             // Stop timer
             strongSelf.fadeOutTimer = nil;
             strongSelf.graceTimer = nil;
-            
+
             // Update / Check view hierarchy to ensure the HUD is visible
             [strongSelf updateViewHierarchy];
-            
+
             // Reset progress and cancel any running animation
             strongSelf.progress = SVProgressHUDUndefinedProgress;
             [strongSelf cancelRingLayerAnimation];
             [strongSelf cancelIndefiniteAnimatedViewAnimation];
-            
+
             // Update imageView
             if (self.shouldTintImages) {
                 if (image.renderingMode != UIImageRenderingModeAlwaysTemplate) {
@@ -854,11 +854,11 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
                 strongSelf.imageView.image = image;
             }
             strongSelf.imageView.hidden = NO;
-            
+
             // Update text
             strongSelf.statusLabel.hidden = status.length == 0;
             strongSelf.statusLabel.text = status;
-            
+
             // Fade in delayed if a grace time is set
             // An image will be dismissed automatically. Thus pass the duration as userInfo.
             if (self.graceTimeInterval > 0.0 && self.backgroundView.alpha == 0.0f) {
@@ -868,7 +868,7 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
                 [strongSelf fadeIn:@(duration)];
             }
         }
-    }];
+    });
 }
 
 - (void)fadeIn:(id)data {
@@ -971,28 +971,28 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
 
 - (void)dismissWithDelay:(NSTimeInterval)delay completion:(SVProgressHUDDismissCompletion)completion {
     __weak SVProgressHUD *weakSelf = self;
-    [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+    dispatch_async(dispatch_get_main_queue(), ^{
         __strong SVProgressHUD *strongSelf = weakSelf;
         if(strongSelf){
             // Stop timer
             strongSelf.graceTimer = nil;
-            
+
             // Post notification to inform user
             [[NSNotificationCenter defaultCenter] postNotificationName:SVProgressHUDWillDisappearNotification
                                                                 object:nil
                                                               userInfo:[strongSelf notificationUserInfo]];
-            
+
             // Reset activity count
             strongSelf.activityCount = 0;
-            
+
             __block void (^animationsBlock)(void) = ^{
                 // Shrink HUD a little to make a nice disappear animation
                 strongSelf.hudView.transform = CGAffineTransformScale(strongSelf.hudView.transform, 1/1.3f, 1/1.3f);
-                
+
                 // Fade out all effects (colors, blur, etc.)
                 [strongSelf fadeOutEffects];
             };
-            
+
             __block void (^completionBlock)(void) = ^{
                 // Check if we really achieved to dismiss the HUD (<=> alpha values are applied)
                 // and the change of these values has not been cancelled in between e.g. due to a new show
@@ -1002,38 +1002,38 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
                     [strongSelf.backgroundView removeFromSuperview];
                     [strongSelf.hudView removeFromSuperview];
                     [strongSelf removeFromSuperview];
-                    
+
                     // Reset progress and cancel any running animation
                     strongSelf.progress = SVProgressHUDUndefinedProgress;
                     [strongSelf cancelRingLayerAnimation];
                     [strongSelf cancelIndefiniteAnimatedViewAnimation];
-                    
+
                     // Remove observer <=> we do not have to handle orientation changes etc.
                     [[NSNotificationCenter defaultCenter] removeObserver:strongSelf];
-                    
+
                     // Post notification to inform user
                     [[NSNotificationCenter defaultCenter] postNotificationName:SVProgressHUDDidDisappearNotification
                                                                         object:strongSelf
                                                                       userInfo:[strongSelf notificationUserInfo]];
-                    
+
                     // Tell the rootViewController to update the StatusBar appearance
 #if !defined(SV_APP_EXTENSIONS) && TARGET_OS_IOS
                     UIViewController *rootController = [[UIApplication sharedApplication] keyWindow].rootViewController;
                     [rootController setNeedsStatusBarAppearanceUpdate];
 #endif
-                    
+
                     // Run an (optional) completionHandler
                     if (completion) {
                         completion();
                     }
                 }
             };
-            
+
             // UIViewAnimationOptionBeginFromCurrentState AND a delay doesn't always work as expected
             // When UIViewAnimationOptionBeginFromCurrentState is set, animateWithDuration: evaluates the current
             // values to check if an animation is necessary. The evaluation happens at function call time and not
             // after the delay => the animation is sometimes skipped. Therefore we delay using dispatch_after.
-            
+
             dispatch_time_t dipatchTime = dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC));
             dispatch_after(dipatchTime, dispatch_get_main_queue(), ^{
                 if (strongSelf.fadeOutAnimationDuration > 0) {
@@ -1051,11 +1051,11 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
                     completionBlock();
                 }
             });
-            
+
             // Inform iOS to redraw the view hierarchy
             [strongSelf setNeedsDisplay];
         }
-    }];
+    })
 }
 
 
