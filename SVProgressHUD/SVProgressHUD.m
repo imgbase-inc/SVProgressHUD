@@ -1055,7 +1055,7 @@ static const CGFloat SVProgressHUDLabelSpacing = 8.0f;
             // Inform iOS to redraw the view hierarchy
             [strongSelf setNeedsDisplay];
         }
-    })
+    });
 }
 
 
